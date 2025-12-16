@@ -169,7 +169,7 @@ simulation_num = 320
 # Define the grid size
 grid_size = 10
 # Define the total number of trajectories
-total_trajectories = 40
+random_sample_num = 40
 # trajectory training data option: 
 # 0: from (1,1) to (10,10) * 100 trajectories
 # 1: from (1,1) to (10,10) * 50 trajectories, from (1,10) to (10,1) * 50 trajectories
@@ -248,7 +248,7 @@ simulation_num = 360
 # Define the grid size
 grid_size = 10
 # Define the total number of trajectories
-total_trajectories = 30
+random_sample_num = 30
 # trajectory training data option: 
 # 0: from (1,1) to (10,10) * 100 trajectories
 # 1: from (1,1) to (10,10) * 50 trajectories, from (1,10) to (10,1) * 50 trajectories
@@ -317,7 +317,7 @@ simulation_num = 380
 # Define the grid size
 grid_size = 10
 # Define the total number of trajectories
-total_trajectories = 30
+random_sample_num = 30
 # trajectory training data option: 
 # 0: from (1,1) to (10,10) * 100 trajectories
 # 1: from (1,1) to (10,10) * 50 trajectories, from (1,10) to (10,1) * 50 trajectories

@@ -20,7 +20,7 @@ parser.add_argument('--city', type=str, default='boston')
 parser.add_argument('--simulation_num', type=int, default=500000)
 parser.add_argument('--test_simulation_num', type=int, default=2000)
 parser.add_argument('--use_given_data', type=bool, default=True)
-parser.add_argument('--condition_num', type=int, default=5)
+parser.add_argument('--history_num', type=int, default=5)
 parser.add_argument('--capacity_scale', type=int, default=10)
 parser.add_argument('--weight_quantization_scale', type=int, default=None)
 parser.add_argument('--max_connection', type=int, default=4)
@@ -67,7 +67,7 @@ city = args.city
 simulation_num = args.simulation_num
 test_simulation_num = args.test_simulation_num
 use_given_data = args.use_given_data
-condition_num = args.condition_num # on each weighted graph, give how many condition?, same as total_trajectories in dataset
+history_num = args.history_num # on each weighted graph, give how many condition?, same as random_sample_num in dataset
 if simulation_num == 0:
     use_given_data = False
 capacity_scale = args.capacity_scale
@@ -118,7 +118,7 @@ torch.manual_seed(args.seed)
 # Load data
 start_time = time.time()
 
-dataloader = traj_dataloader(city, data_dir, test_data_dir, simulation_num, test_simulation_num, condition_num, block_size, capacity_scale, weight_quantization_scale, max_connection, batch_size, shuffle=True, num_workers=8)
+dataloader = traj_dataloader(city, data_dir, test_data_dir, simulation_num, test_simulation_num, history_num, block_size, capacity_scale, weight_quantization_scale, max_connection, batch_size, shuffle=True, num_workers=8)
 # loader.randomize_start_and_condition()
 
 vocab_size = dataloader.vocab_size

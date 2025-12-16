@@ -2,7 +2,7 @@ city                          : boston
 simulation_num                : 500000
 test_simulation_num           : 2000
 use_given_data                : True
-condition_num                 : 5
+history_num                 : 5
 capacity_scale                : 10
 weight_quantization_scale     : None
 max_connection                : 4

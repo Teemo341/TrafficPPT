@@ -1,1 +1,1 @@
-data_root = '/datadisk/yanshou/SmartTrafficFramework/data'
+global_data_root = '/datadisk/yanshou/ssy/TrafficPPT/data'

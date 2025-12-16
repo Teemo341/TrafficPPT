@@ -1,17 +1,16 @@
-from typing import OrderedDict
 import networkx as nx
 import os
 import pickle
 import numpy as np
 import pandas as pd
-import shutil
 
 import argparse
 from tqdm import tqdm
+from global_settings import global_data_root
 
 
-# Function to preprocess the map of Boston
-def preprocess_data_boston(origin_data):
+# Function to preprocess the map
+def preprocess_data_OSM(origin_data):
     E = len(origin_data['edge_id'])
 
     # Record the coordinates of the nodesand calculate the bounds of weights
@@ -65,15 +64,19 @@ def preprocess_traj(traj_dir):
     return trajs_ 
     # [vehicle_0, vehicle_1, ...], vehicle_i = [traj_0, traj_1, ...], traj_i = {"VehicleID": vid, "TripID": tid, "Points": [[id, time] for p in ps.split("_")], "DepartureTime": dt, "Duration": dr}
 
-# Function to read the data of cities
-def read_city(city, path='./data'):
-    if city in ['boston', 'paris']:
-        origin_data_path = os.path.join(path, f'{city}_data.csv')
+# Function to read the map of cities
+def read_city(city, root=global_data_root):
+    root = os.path.join(root, city)
+    assert os.path.exists(root), f'Error: data path {root} does not exist!'
+
+    origin_data_path = os.path.join(root, f'{city}_data.csv')
+    if os.path.exists(origin_data_path):
         origin_data = pd.read_csv(origin_data_path).to_dict(orient='list')
-        edges, pos = preprocess_data_boston(origin_data) #! 0-indexing
-    elif city in ['jinan','shenzheng','newyork']:
-        node_dir = os.path.join(path, f'{city}/node_{city}.csv')
-        edge_dir = os.path.join(path, f'{city}/edge_{city}.csv')
+        edges, pos = preprocess_data_OSM(origin_data) #! 0-indexing
+
+    else:
+        node_dir = os.path.join(root, f'node_{city}.csv')
+        edge_dir = os.path.join(root, f'edge_{city}.csv')
         pos = preprocess_node(node_dir) #! 0-indexing
         edges = preprocess_edge(edge_dir) #! 0-indexing
 
@@ -104,7 +107,7 @@ def get_weighted_adj_table(edges, pos, capacity, normalization = True, quantizat
     if normalization:
         adj_table[:,:,1] = adj_table[:,:,1]/np.max(adj_table[:,:,1])
     if quantization_scale:
-        adj_table[:,:,1] = np.ceil(adj_table[:,:,1]*quantization_scale)
+        adj_table[:,:,1] = np.ceil(adj_table[:,:,1]/np.max(adj_table[:,:,1])*quantization_scale)
         
     return adj_table #! 0-indexing
 
@@ -123,7 +126,7 @@ def transfer_graph(adj_table):
 
 
 # get shortest traj, input one adj_table, one OD pair, return one trajectory 1-indexing
-#! OD is 1-indexing, trajectory is 1-indexing
+#! OD is 1-indexing, trajectory is 1-indexing, graph is 0-indexing
 def generate_trajectory_list(G, OD, max_length = 50):
     trajectory = nx.shortest_path(G, (OD[0]-1), (OD[1]-1), weight='weight')
     if len(trajectory) > max_length:
@@ -143,22 +146,22 @@ def generate_OD(G, node_num):
     return OD
 
 
-def generate_data(city = 'boston', total_trajectories = 5, max_length = 50, capacity_scale = 10, weight_quantization_scale = None, max_connection = 4):
-    edges, pos = read_city(city, path='./data_city') #! 0-indexing
+# for each OD, generate random_sample_num trajectories and adj_table
+def simple_simulator(city = 'boston', random_sample_num = 5, max_length = 50, capacity_scale = 10, weight_quantization_scale = None, max_connection = 4):
+    edges, pos = read_city(city) #! 0-indexing
     node_num = len(pos)
     edge_num = len(edges)
 
     all_encoded_trajectories = [] #! 1-indexing
     all_adj_list = [] #! 0-indexing
-    edge_capacity = sample_capacity(capacity_scale,edge_num)
-    adj_table = get_weighted_adj_table(edges, pos, edge_capacity, normalization = True, quantization_scale = weight_quantization_scale, max_connection = max_connection) #! 0-indexing
-    G = transfer_graph(adj_table) #! 0-indexing
-    OD = generate_OD(G, node_num) #! 1-indexing
+    OD = None #! 1-indexing
     i = 0
-    while i < total_trajectories:
+    while i < random_sample_num:
         edge_capacity = sample_capacity(capacity_scale,edge_num)
         adj_table = get_weighted_adj_table(edges, pos, edge_capacity, normalization = True, quantization_scale = weight_quantization_scale, max_connection = max_connection)
         G = transfer_graph(adj_table)
+        if OD is None:
+            OD = generate_OD(G, node_num) #! 1-indexing
         trajectory = generate_trajectory_list(G, OD, max_length=max_length)
 
         if trajectory == None:
@@ -172,18 +175,18 @@ def generate_data(city = 'boston', total_trajectories = 5, max_length = 50, capa
             all_adj_list.append(adj_table)
             i += 1
 
-    # all_encoded_trajectories: [total_trajectories, max_length] #! 1-indexing
-    # all_adj_list: [total_trajectories, node_num, max_connection, 2] #! 0-indexing
+    # all_encoded_trajectories: [random_sample_num, max_length] #! 1-indexing
+    # all_adj_list: [random_sample_num, node_num, max_connection, 2] #! 0-indexing
     return all_encoded_trajectories, all_adj_list
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_dir', type=str, default='./data/')
+    parser.add_argument('--tmp_root', type=str, default=None)
     parser.add_argument('--city', type=str, default='boston')
     parser.add_argument('--simulation_from', type=int, default=0)
     parser.add_argument('--simulation_num', type=int, default=2000000)
-    parser.add_argument('--total_trajectories', type=int, default=5)
+    parser.add_argument('--random_sample_num', type=int, default=5)
     parser.add_argument('--max_length', type=int, default=50)
     parser.add_argument('--capacity_scale', type=int, default=10)
     parser.add_argument('--weight_quantization_scale', type=int, default=None)
@@ -191,36 +194,36 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     city = args.city
-    data_dir = args.data_dir
+    data_root = args.tmp_root
     simulation_from = args.simulation_from
     simulation_num = args.simulation_num
-    total_trajectories = args.total_trajectories
+    random_sample_num = args.random_sample_num
     max_length = args.max_length
     capacity_scale = args.capacity_scale
     weight_quantization_scale = args.weight_quantization_scale
     max_connection = args.max_connection
 
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-
     #simulation for simulation_num times
 
-    edges, pos = read_city(city, path='./data_city')
-    shutil.copyfile('./data_city/boston_data.csv', data_dir+'/boston_data.csv')
+    if data_root is None:
+        data_root = os.path.join(global_data_root, city, 'simple_simulator','data_one_by_one')
+    else:
+        os.mkdir(data_root, exist_ok=True)
+
+    edges, pos = read_city(city)
     node_num = len(pos)
     edge_num = len(edges)
 
     print('Start generating data...')
     for t in tqdm(range(simulation_from, simulation_from+simulation_num), desc=f'Generating data'):
-        all_encoded_trajectories, all_adj_list = generate_data(city = city, total_trajectories = total_trajectories, max_length = max_length, capacity_scale = capacity_scale, weight_quantization_scale = weight_quantization_scale, max_connection = max_connection)
+        all_encoded_trajectories, all_adj_list = simple_simulator(city = city, random_sample_num = random_sample_num, max_length = max_length, capacity_scale = capacity_scale, weight_quantization_scale = weight_quantization_scale, max_connection = max_connection)
 
-        single_data_dir = data_dir+f'/data_one_by_one/{t}'
+        single_data_dir = os.path.join(data_root, str(t))
         if not os.path.exists(single_data_dir):
             os.makedirs(single_data_dir)
-        with open (single_data_dir+'/trajectory_list.pkl', 'wb') as file:
+        with open (os.path.join(single_data_dir,'trajectory_list.pkl'), 'wb') as file:
             pickle.dump(all_encoded_trajectories, file)
-        with open (single_data_dir+'/adj_table_list.pkl', 'wb') as file:
+        with open (os.path.join(single_data_dir,'adj_table_list.pkl'), 'wb') as file:
             pickle.dump(all_adj_list, file)
-
 
     print(f'one by one saved successfully!')

@@ -3,9 +3,10 @@
 *.pkl
 *.zip
 *.DS_Store
-*/__MACOSX/*
-*/.ipynb_checkpoints/*
-*/.vscode/*
+**/__MACOSX/*
+**/.ipynb_checkpoints/*
+**/.vscode/*
+**/__pycache__/*
 
 ./data
 ./video
