@@ -1,14 +1,13 @@
-from os import replace
-from requests import get
+import os
 import torch
-import time
 import pickle
 import random
 from tqdm import tqdm
 import numpy as np
 import math
 
-from dataset import generate_data, read_city, preprocess_traj, get_weighted_adj_table
+from global_settings import data_root
+from .dataset import generate_data, read_city, preprocess_traj, get_weighted_adj_table
 from torch.utils.data import Dataset, DataLoader
 
 
@@ -51,12 +50,12 @@ def read_adj_table(filename):
     return all_adj_table
 
 
-def read_data_pkl(idx, block_size, root='./data'):
-    encoded_trajectory = read_encoded_trajectory(
-        f'{root}/data_one_by_one/{idx}/trajectory_list.pkl')
+def read_data_pkl(idx, block_size, root):
+    traj_dir = os.path.join(root, f'data_one_by_one/{idx}/trajectory_list.pkl')
+    adj_dir = os.path.join(root, f'data_one_by_one/{idx}/adj_table_list.pkl')
+    encoded_trajectory = read_encoded_trajectory(traj_dir)
     encoded_trajectory, special_mask = refine_trajectory(encoded_trajectory, block_size)
-    adj_table = read_adj_table(
-        f'{root}/data_one_by_one/{idx}/adj_table_list.pkl')
+    adj_table = read_adj_table(adj_dir)
 
     # encoded_trajectory: [N x T] #! 1-indexing
     # special_mask: [N x T]
@@ -66,7 +65,7 @@ def read_data_pkl(idx, block_size, root='./data'):
 
 # datasets
 class traj_dataset(Dataset):
-    def __init__(self, city='boston', data_dir='./data', simulation_num=1000000, history_num = 5, block_size=60, start_id = 0):
+    def __init__(self, city='boston', data_dir=data_root, simulation_num=1000000, history_num = 5, block_size=60, start_id = 0):
         super(traj_dataset, self).__init__()
         self.data_dir = data_dir
         self.city = city

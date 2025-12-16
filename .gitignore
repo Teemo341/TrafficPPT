@@ -7,8 +7,6 @@
 */.ipynb_checkpoints/*
 */.vscode/*
 
-data
-data_test
-data_temp
-data_train
-data_bkp
+./data
+./video
+./logs

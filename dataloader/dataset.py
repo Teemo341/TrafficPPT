@@ -68,11 +68,12 @@ def preprocess_traj(traj_dir):
 # Function to read the data of cities
 def read_city(city, path='./data'):
     if city in ['boston', 'paris']:
-        origin_data = pd.read_csv(path + '/'+ city + '_data.csv').to_dict(orient='list')
+        origin_data_path = os.path.join(path, f'{city}_data.csv')
+        origin_data = pd.read_csv(origin_data_path).to_dict(orient='list')
         edges, pos = preprocess_data_boston(origin_data) #! 0-indexing
-    elif city in ['jinan']:
-        node_dir = f"{path}/{city}/node_{city}.csv"
-        edge_dir = f"{path}/{city}/edge_{city}.csv"
+    elif city in ['jinan','shenzheng','newyork']:
+        node_dir = os.path.join(path, f'{city}/node_{city}.csv')
+        edge_dir = os.path.join(path, f'{city}/edge_{city}.csv')
         pos = preprocess_node(node_dir) #! 0-indexing
         edges = preprocess_edge(edge_dir) #! 0-indexing
 

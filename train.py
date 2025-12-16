@@ -6,8 +6,8 @@ import numpy as np
 import time
 import random
 
-from model_mae import no_diffusion_model_cross_attention_parallel as no_diffusion_model
-from data_loader import  traj_dataloader
+from model.model_mae import no_diffusion_model_cross_attention_parallel as no_diffusion_model
+from dataloader.dataloader import  traj_dataloader
 
 
 # ------------------------------------------------------------------------------------------------------------------------------------------
