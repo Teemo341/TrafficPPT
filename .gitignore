@@ -8,6 +8,7 @@
 **/.vscode/*
 **/__pycache__/*
 
-./data
-./video
-./logs
+/data
+/video
+/logs
+/weights

@@ -7,39 +7,8 @@ import numpy as np
 import math
 
 from global_settings import global_data_root
-from .dataset import simple_simulator, read_city, preprocess_traj, get_weighted_adj_table
+from .dataset import read_city, preprocess_traj, get_weighted_adj_table
 from torch.utils.data import Dataset, DataLoader
-
-
-def read_encoded_trajectory(filename):
-    '''Function to read the encoded data from a file and save it as a list'''
-    with open(filename, 'rb') as file:
-        all_encoded_trajectories = pickle.load(file)
-
-    # all_encoded_trajectories: NxT, T can be different for each trajectory
-    return all_encoded_trajectories #! 1-indexing
-
-
-def refine_trajectory(trajectories, block_size):
-    '''change inequal length trajectory to equal length trajectory, change list to np'''
-    all_encoded_trajectories = []
-    all_special_mask = np.ones((len(trajectories), block_size),dtype=np.int32)
-    for i in range(len(trajectories)):
-        traj = trajectories[i]
-        traj = [int(code) for code in traj]
-        if len(traj) > block_size:
-            raise ValueError(f'Trajectory length {len(
-                traj)} is greater than block size {block_size}')
-        elif len(traj) < block_size:
-            all_special_mask[i, len(traj)+1:] = 0
-            traj += [0] * (block_size - len(traj))
-        all_encoded_trajectories.append(traj)
-    all_encoded_trajectories = np.array(all_encoded_trajectories, dtype=np.int32)
-
-    # all_encoded_trajectories: NxT, #! 1-indexing
-    # all_special_mask: NxT
-    return all_encoded_trajectories, all_special_mask
-
 
 # datasets
 class one_by_one_dataset(Dataset):
@@ -74,8 +43,8 @@ class one_by_one_dataset(Dataset):
     def read_data(self, idx, block_size, root):
         traj_dir = os.path.join(root, f'data_one_by_one/{idx}/trajectory_list.pkl')
         adj_dir = os.path.join(root, f'data_one_by_one/{idx}/adj_table_list.pkl')
-        encoded_trajectory = read_encoded_trajectory(traj_dir)
-        encoded_trajectory, special_mask = refine_trajectory(encoded_trajectory, block_size)
+        encoded_trajectory = self.read_encoded_trajectory(traj_dir)
+        encoded_trajectory, special_mask = self.refine_trajectory(encoded_trajectory, block_size)
         adj_table = self.read_adj_table(adj_dir)
         if self.weight_quantization_scale is not None:
             adj_table[:,:,1] = np.ceil(adj_table[:,:,1]/np.max(adj_table[:,:,1])*self.weight_quantization_scale)
@@ -83,6 +52,32 @@ class one_by_one_dataset(Dataset):
         # special_mask: [N x T]
         # adj_table: [N x V x 4 x 2] #! index is 0-indexing, content is 1-indexing
         return encoded_trajectory, special_mask, adj_table
+    
+    def read_encoded_trajectory(self, filename):
+        '''Function to read the encoded data from a file and save it as a list'''
+        with open(filename, 'rb') as file:
+            all_encoded_trajectories = pickle.load(file)
+        # all_encoded_trajectories: NxT, T can be different for each trajectory
+        return all_encoded_trajectories #! 1-indexing
+    
+    def refine_trajectory(self, trajectories, block_size):
+        '''change inequal length trajectory to equal length trajectory, change list to np'''
+        all_encoded_trajectories = []
+        all_special_mask = np.ones((len(trajectories), block_size),dtype=np.int32)
+        for i in range(len(trajectories)):
+            traj = trajectories[i]
+            traj = [int(code) for code in traj]
+            if len(traj) > block_size:
+                raise ValueError(f'Trajectory length {len(
+                    traj)} is greater than block size {block_size}')
+            elif len(traj) < block_size:
+                all_special_mask[i, len(traj)+1:] = 0
+                traj += [0] * (block_size - len(traj))
+            all_encoded_trajectories.append(traj)
+        all_encoded_trajectories = np.array(all_encoded_trajectories, dtype=np.int32)
+        # all_encoded_trajectories: NxT, #! 1-indexing
+        # all_special_mask: NxT
+        return all_encoded_trajectories, all_special_mask
     
     def read_adj_table(self, filename):
         # read adj table, return np
